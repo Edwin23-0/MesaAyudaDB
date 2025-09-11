@@ -1,0 +1,15 @@
+1.Creas el repositorio en git hub
+2.Crea la Estructura de las carpetas a trabajar
+3.Descarga git y con cd ingresa a la carpeta base
+4.Covierte Tu carpeta base en local con git init
+5.Si es primera vez configura la identidad con
+git config --global user.name "Tu Nombre"
+git config --global user.email "tu_correo@ejemplo.com"
+6.conectar con tu repo remoto con el URL unico que te da github: git remote add origin https://github.com/Edwin23-0/MesaAyudaDB.git
+7.El repositorio por defecto esta en la rama main pero git usa una version vieja llamada master entonces 
+vamos a pasar master a main con : git branch -M main
+8. Finalmente subes los cambios que hayas echo con esta estructura :
+
+git add .
+git commit -m "Primer commit: estructura inicial del proyecto MesaAyuda"
+git push -u origin main
