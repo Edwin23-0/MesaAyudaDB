@@ -1,0 +1,7 @@
+Levantar un contenedor:
+
+1.Primero debes tener Docker desktop funcionando correctamente con su virtualización activada y WSL2 en perfectas
+condiciones
+2. Para levantar un contenedor debes tener en cuenta la imagen que vas usar y para que proyecto.
+3. Puedes levantar el contenedor directamente por powershell con código de comandos, puedes crearlo desde la aplicación de Docker o crear un archivo docker-compose.yml dentro de la carpeta de tu proyecto y ejecutarlo desde visual o con powershell 
+con el siguiente comando docker-compose up -d.
