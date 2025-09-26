@@ -1,0 +1,39 @@
+Comando básicos Git-GitHub:
+
+Crear y conectar repositorio
+git init                              # Inicia un repositorio local
+git remote add origin URL_DEL_REPO    # Conecta el repo local con GitHub
+git branch -M main                    # Renombra la rama a "main", ya que
+usualmente la rama que viene por defecto en Git es Master
+
+Globalizar
+git config --global user.name "Tu Nombre"   #Globalizar nombre y correo para saber quien es el que hace los cambios
+git config --global user.email "tu_correo@ejemplo.com"
+
+
+Subir cambios a GitHub
+git add .                             # Agregar todos los cambios
+git add archivo.ext                   # Agregar un archivo específico
+git commit -m "Mensaje claro"         # Guardar cambios en local
+git push -u origin main               # Subir a GitHub
+
+Descargar cambios desde GitHub:
+git pull origin main                  # Traer cambios del remoto
+
+git clone URL_DEL_REPO   	      #Clonar un repositorio existente
+
+Ver estado y cambios
+git status                            # Ver qué archivos cambiaron
+git log                               # Historial de commits
+git diff                              # Ver diferencias antes de hacer commit
+
+Manejo de ramas (básico)
+git branch                            # Ver ramas
+git branch nombre-rama                # Crear nueva rama
+git checkout nombre-rama              # Cambiar de rama
+git merge nombre-rama                 # Combinar cambios de otra rama
+
+Deshacer errores
+git restore archivo.ext               # Deshacer cambios en un archivo
+git reset --soft HEAD~1               # Quitar el último commit (sin perder cambios)
+git reset --hard HEAD~1               # Eliminar último commit (⚠️ pierdes cambios)
