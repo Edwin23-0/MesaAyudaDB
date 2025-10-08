@@ -1,3 +1,4 @@
+#levantar contenedor
 services:
   db:
     image: mcr.microsoft.com/mssql/server:2022-latest
@@ -7,18 +8,22 @@ services:
     environment:
       ACCEPT_EULA: "Y"
       SA_PASSWORD: "BDMayuda*2025"
-      MSSQL_PID: "Developer"
+      MSSQL_PID: "Developer"        # Licencia Developer para entorno académico
     volumes:
+      # Volumen con persistencia real (datos, logs, backups)
       - mssql-data:/var/opt/mssql
+      # (opcional) carpeta con .bak para RESTORE o para exportar backups
       - ./backups:/var/opt/mssql/backups
     healthcheck:
-      test: ["CMD-SHELL", "/opt/mssql-tools/bin/sqlcmd -S localhost -U SA -P 'BDMayuda*2025' -Q \"SELECT 1\" || exit 1"]
+      # Verifica que SQL Server esté aceptando conexiones
+      test: ["CMD-SHELL", "/opt/mssql-tools/bin/sqlcmd -S localhost -U SA -P \"$SA_PASSWORD\" -Q \"SELECT 1\" || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 10
       start_period: 20s
     restart: unless-stopped
 
+  # (OPCIONAL) Servicio de "seed" para crear DB/tablas/datos automáticamente desde .sql
   db-seed:
     image: mcr.microsoft.com/mssql/server:2022-latest
     depends_on:
@@ -26,17 +31,17 @@ services:
         condition: service_healthy
     environment:
       ACCEPT_EULA: "Y"
-      SA_PASSWORD: "BDMayuda*2025"
+      SA_PASSWORD: "${SA_PASSWORD:-BDMayuda*2025}"
     volumes:
-      - ./sql:/sql:ro
+      - ./sql:/sql:ro   # coloca aquí tus scripts .sql
     entrypoint: >
       /bin/bash -lc "
       echo 'Ejecutando seed...';
-      /opt/mssql-tools/bin/sqlcmd -S db -U SA -P 'BDMayuda*2025' -d master -i /sql/00_create_database.sql;
-      for file in /sql/*.sql; do
-        if [ \"$file\" != \"/sql/00_create_database.sql\" ]; then
-          echo Ejecutando $file;
-          /opt/mssql-tools/bin/sqlcmd -S db -U SA -P 'BDMayuda*2025' -d MesaAyudaDB -i \"$file\";
+      /opt/mssql-tools/bin/sqlcmd -S db -U SA -P \"$SA_PASSWORD\" -d master -i /sql/00_create_database.sql;
+      for f in /sql/*.sql; do
+        if [ \"$f\" != \"/sql/00_create_database.sql\" ]; then
+          echo Ejecutando $f;
+          /opt/mssql-tools/bin/sqlcmd -S db -U SA -P \"$SA_PASSWORD\" -d MesaAyudaDB -i \"$f\";
         fi
       done;
       echo 'Seed completo';

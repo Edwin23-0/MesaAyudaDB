@@ -1,8 +1,12 @@
 1.Creas el repositorio en git hub
+	-Haz clic en New Repository.
+	-Asigna un nombre (ejemplo: MesaAyudaDB) y agrega una descripción.
+	-Selecciona si quieres que sea público o privado.
+	-Crea el repositorio.
 2.Crea la Estructura de las carpetas a trabajar
-3.Descarga git y con cd ingresa a la carpeta base
+3.Descarga git y con cd ingresa a la carpeta base del proyecto
 4.Covierte Tu carpeta base en local con git init
-5.Si es primera vez configura la identidad con
+5.Si es primera vez configura la identidad Esto le dice a Git quién está haciendo los cambios:
 git config --global user.name "Tu Nombre"
 git config --global user.email "tu_correo@ejemplo.com"
 6.conectar con tu repo remoto con el URL unico que te da github: git remote add origin https://github.com/Edwin23-0/MesaAyudaDB.git
@@ -13,3 +17,14 @@ vamos a pasar master a main con : git branch -M main
 git add .
 git commit -m "Primer commit: estructura inicial del proyecto MesaAyuda"
 git push -u origin main
+
+
+
+
+////////////////////////////////////////////////////////
+
+1.Por otra parte si estas manejando tu proyecto en otro equipo , si no tienes configurada la identidad configúrala.
+2.Usamo el comando git clone https://github.com/Edwin23-0/MesaAyudaDB.git para clonar el repositorio en la carpeta que deseemos.
+3. si queremos generar un commit especifico en algún archivo editado , primero entramos a la carpeta del archivo , usamos el comando git add nombre de archivo.extencion
+4.luego hacemos el respectivo commit y push a la rama que estemos usando 
+5. Si alguna persona hizo cambios en el proyecno usa git pull origin main
