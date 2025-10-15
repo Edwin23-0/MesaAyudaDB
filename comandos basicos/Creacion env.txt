@@ -1,0 +1,23 @@
+Creación de un entorno virtual para proyectos:
+
+1.python -m venv venv		#Esto crea una carpeta llamada venv con todos los archivos necesarios.
+
+2.venv\Scripts\actívate		#Activa el entorno virtual en Windows
+
+3.(venv) C:\Users\Santiago\Desktop\MesaAyudaDB\backend>		#Si se activa correctamente, verás algo así al inicio de la línea de comandos
+
+4. deactivate		#Cuando termines de trabajar, puedes salir del entorno con:
+
+Posteriormente si se esta trabajando en Visual Studio seleccionas el entorno con:
+
+5. Ctrl + Shift + P
+
+6. Escribe "Python: Select Interpreter"
+
+7. Elige el que tenga .\venv\Scripts\python.exe o pega la ruta de la carpeta donde esta ubicado el entorno 8
+
+8. Cuando ya tengas todas las dependencias y librerías en tu proyecto puedes crear un archivo requeriments.txt donde contiene las librerías usadas exactamente con la versión, lo haces con el siguiente comando en tu carpeta raíz:
+pip freeze > requirements.txt
+Para instalar todas las dependencias del archivo requeriments primero crea el entorno virtual en el otro equipo y instala por medio de:
+pip install -r requirements.txt
+

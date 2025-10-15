@@ -14,7 +14,7 @@ fake = Faker('es_CO')
 def poblar_datos():
     with Session(engine) as session:
         try:
-            print("🚀 Iniciando poblamiento de la base de datos...\n" + "-"*70)
+            print("🚀 Iniciando poblamiento realista de la base de datos...\n" + "-"*70)
 
             # ==================================================
             # 1️⃣ CLIENTES
@@ -26,32 +26,53 @@ def poblar_datos():
                     telefono=fake.phone_number(),
                     direccion=fake.address()
                 )
-                for _ in range(30)
+                for _ in range(40)
             ]
             session.add_all(clientes)
             session.commit()
             print(f"👥 Clientes insertados: {len(clientes)}")
 
             # ==================================================
-            # 2️⃣ USUARIOS DEL SISTEMA
+            # 2️⃣ USUARIOS DEL SISTEMA (distribución lógica)
             # ==================================================
-            roles = ["Técnico", "Supervisor", "Administrador"]
-            usuarios = [
-                UsuarioSistema(
+            usuarios = []
+
+            # 2 administradores
+            for _ in range(2):
+                usuarios.append(UsuarioSistema(
                     nombre=fake.name(),
                     email=fake.email(),
                     telefono=fake.phone_number(),
-                    rol=random.choice(roles),
-                    especialidad=random.choice(["Redes", "Software", "Hardware", "Soporte"])
-                )
-                for _ in range(15)
-            ]
+                    rol="Administrador",
+                    especialidad=random.choice(["Software", "Redes"])
+                ))
+
+            # 3 supervisores
+            for _ in range(3):
+                usuarios.append(UsuarioSistema(
+                    nombre=fake.name(),
+                    email=fake.email(),
+                    telefono=fake.phone_number(),
+                    rol="Supervisor",
+                    especialidad=random.choice(["Hardware", "Soporte"])
+                ))
+
+            # 6 técnicos
+            for _ in range(6):
+                usuarios.append(UsuarioSistema(
+                    nombre=fake.name(),
+                    email=fake.email(),
+                    telefono=fake.phone_number(),
+                    rol="Técnico",
+                    especialidad=random.choice(["Software", "Hardware", "Soporte", "Redes"])
+                ))
+
             session.add_all(usuarios)
             session.commit()
             print(f"👨‍💻 Usuarios del sistema insertados: {len(usuarios)}")
 
             # ==================================================
-            # 3️⃣ TIPO DE SERVICIO
+            # 3️⃣ TIPOS DE SERVICIO
             # ==================================================
             tipos_servicio = [
                 TipoServicio(nombre=n, descripcion=fake.sentence())
@@ -68,7 +89,7 @@ def poblar_datos():
                 ServicioCliente(
                     id_cliente=random.choice(clientes).id_cliente,
                     id_tipo=random.choice(tipos_servicio).id_tipo,
-                    fecha_inicio=fake.date_between(start_date='-120d', end_date='today'),
+                    fecha_inicio=fake.date_between(start_date='-180d', end_date='today'),
                     estado=random.choice(["Activo", "Suspendido", "Finalizado"])
                 )
                 for _ in range(50)
@@ -78,10 +99,10 @@ def poblar_datos():
             print(f"📋 ServiciosCliente insertados: {len(servicios_cliente)}")
 
             # ==================================================
-            # 5️⃣ TIPO DE PROBLEMA
+            # 5️⃣ TIPOS DE PROBLEMA
             # ==================================================
             tipos_problema = [
-                TipoProblema(nombre=n, descripcion=fake.text())
+                TipoProblema(nombre=n, descripcion=fake.text(max_nb_chars=100))
                 for n in ["Conectividad", "Rendimiento", "Seguridad", "Configuración", "Error de Software"]
             ]
             session.add_all(tipos_problema)
@@ -89,19 +110,19 @@ def poblar_datos():
             print(f"🧩 Tipos de problema insertados: {len(tipos_problema)}")
 
             # ==================================================
-            # 6️⃣ TRABAJOS
+            # 6️⃣ TRABAJOS (solo técnicos)
             # ==================================================
+            tecnicos = [u for u in usuarios if u.rol == "Técnico"]
             trabajos = []
-            for _ in range(80):
+            for _ in range(90):
                 cliente = random.choice(clientes)
-                tecnico = random.choice([u for u in usuarios if u.rol == "Técnico"])
+                tecnico = random.choice(tecnicos)
                 tipo_prob = random.choice(tipos_problema)
-
                 trabajo = Trabajo(
                     id_cliente=cliente.id_cliente,
                     id_tecnico=tecnico.id_usuario,
                     id_tipo=tipo_prob.id_tipo,
-                    fecha_creacion=fake.date_time_between(start_date='-90d', end_date='now'),
+                    fecha_creacion=fake.date_time_between(start_date='-120d', end_date='now'),
                     estado=random.choice(["En Proceso", "Finalizado", "Pendiente"]),
                     tipo_problema=tipo_prob.nombre
                 )
@@ -117,9 +138,9 @@ def poblar_datos():
                 DetalleTrabajo(
                     id_trabajo=random.choice(trabajos).id_trabajo,
                     tipo=random.choice(["Diagnóstico", "Reparación", "Instalación"]),
-                    descripcion=fake.text(max_nb_chars=150)
+                    descripcion=fake.text(max_nb_chars=120)
                 )
-                for _ in range(120)
+                for _ in range(130)
             ]
             session.add_all(detalles)
             session.commit()
@@ -133,9 +154,9 @@ def poblar_datos():
                     id_trabajo=random.choice(trabajos).id_trabajo,
                     modelo=f"Modelo-{fake.random_int(100, 999)}",
                     serie=f"SN-{fake.uuid4()[:8]}",
-                    fecha_instalacion=fake.date_between(start_date='-60d', end_date='today')
+                    fecha_instalacion=fake.date_between(start_date='-90d', end_date='today')
                 )
-                for _ in range(60)
+                for _ in range(70)
             ]
             session.add_all(equipos)
             session.commit()
@@ -151,7 +172,7 @@ def poblar_datos():
                     tipo=random.choice(["Problema", "Categoría", "MotivoCierre"]),
                     creado_por=random.choice(usuarios).id_usuario
                 )
-                for i in range(1, 20)
+                for i in range(1, 25)
             ]
             session.add_all(catalogos)
             session.commit()
@@ -161,7 +182,7 @@ def poblar_datos():
             # 🔟 TICKETS
             # ==================================================
             tickets = []
-            for _ in range(100):
+            for _ in range(120):
                 trabajo = random.choice(trabajos)
                 creador = random.choice(usuarios)
                 catalogo = random.choice(catalogos)
@@ -179,11 +200,11 @@ def poblar_datos():
             print(f"🎫 Tickets insertados: {len(tickets)}")
 
             # ==================================================
-            # 1️⃣1️⃣ VALIDACIONES
+            # 1️⃣1️⃣ VALIDACIONES (solo supervisores)
             # ==================================================
-            validaciones = []
             supervisores = [u for u in usuarios if u.rol == "Supervisor"]
-            for t in random.sample(tickets, int(len(tickets)*0.7)):  # 70% validados
+            validaciones = []
+            for t in random.sample(tickets, int(len(tickets)*0.7)):
                 supervisor = random.choice(supervisores)
                 validacion = Validacion(
                     id_ticket=t.id_ticket,
@@ -216,7 +237,7 @@ def poblar_datos():
             print(f"🕓 HistorialTickets insertados: {len(historial)}")
 
             print("-"*70)
-            print("🎉 Poblamiento completado exitosamente 🎉")
+            print("🎉 Poblamiento realista completado exitosamente 🎉")
 
         except Exception as e:
             session.rollback()
