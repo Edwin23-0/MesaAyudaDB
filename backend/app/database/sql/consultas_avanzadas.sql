@@ -1,94 +1,111 @@
 
--- 1️⃣ Técnicos con mayor cantidad de tickets cerrados
+-- 1️⃣ Promedio de días por técnico (ya la tienes)
 SELECT 
     u.nombre AS Tecnico,
-    COUNT(t.id_ticket) AS Total_Cerrados
-FROM dbo.Ticket t
-INNER JOIN dbo.Trabajo tr ON t.id_trabajo = tr.id_trabajo
-INNER JOIN dbo.UsuarioSistema u ON tr.id_tecnico = u.id_usuario
-WHERE t.estado = 'Cerrado'
+    COUNT(t.id_trabajo) AS Total_Trabajos,
+    AVG(DATEDIFF(DAY, t.fecha_creacion, GETDATE())) AS Promedio_Dias_Trabajo
+FROM dbo.Trabajo t
+JOIN dbo.UsuarioSistema u ON t.id_tecnico = u.id_usuario
+WHERE u.rol = 'tecnico'
 GROUP BY u.nombre
-ORDER BY Total_Cerrados DESC;
+ORDER BY Promedio_Dias_Trabajo ASC;
 
--- 2️⃣ Promedio de tiempo de resolución de tickets por técnico
+-- 2️⃣ Técnicos con más de 5 trabajos asignados (usa HAVING)
 SELECT 
     u.nombre AS Tecnico,
-    AVG(DATEDIFF(HOUR, t.fecha_creacion, t.fecha_cierre)) AS Promedio_Horas_Resolucion
-FROM dbo.Ticket t
-INNER JOIN dbo.Trabajo tr ON t.id_trabajo = tr.id_trabajo
-INNER JOIN dbo.UsuarioSistema u ON tr.id_tecnico = u.id_usuario
-WHERE t.estado = 'Cerrado'
+    COUNT(t.id_trabajo) AS Total_Trabajos
+FROM dbo.Trabajo t
+JOIN dbo.UsuarioSistema u ON t.id_tecnico = u.id_usuario
+WHERE u.rol = 'tecnico'
 GROUP BY u.nombre
-ORDER BY Promedio_Horas_Resolucion ASC;
+HAVING COUNT(t.id_trabajo) > 5
+ORDER BY Total_Trabajos DESC;
 
--- 3️⃣ Clientes con más tickets creados
+-- 3️⃣ Clientes con más de un tipo de servicio activo
 SELECT 
     c.nombre AS Cliente,
-    COUNT(t.id_ticket) AS Total_Tickets
-FROM dbo.Ticket t
-INNER JOIN dbo.ServicioCliente sc ON t.id_servicio_cliente = sc.id_servicio_cliente
-INNER JOIN dbo.Cliente c ON sc.id_cliente = c.id_cliente
+    COUNT(DISTINCT s.id_tipo) AS Tipos_Servicio_Activos
+FROM dbo.ServicioCliente s
+JOIN dbo.Cliente c ON s.id_cliente = c.id_cliente
+WHERE s.estado = 'activo'
+GROUP BY c.nombre
+HAVING COUNT(DISTINCT s.id_tipo) > 1;
+
+-- 4️⃣ Promedio de validaciones por supervisor (usa AVG + GROUP BY)
+SELECT 
+    u.nombre AS Supervisor,
+    COUNT(v.id_validacion) AS Total_Validaciones,
+    AVG(CASE WHEN v.resultado = 1 THEN 1 ELSE 0 END) * 100 AS Porcentaje_Aprobadas
+FROM dbo.Validacion v
+JOIN dbo.UsuarioSistema u ON v.id_supervisor = u.id_usuario
+WHERE u.rol = 'supervisor'
+GROUP BY u.nombre
+ORDER BY Porcentaje_Aprobadas DESC;
+
+-- 5️⃣ Top 5 clientes con más tickets creados (usa TOP + ORDER BY)
+SELECT TOP 5 
+    c.nombre AS Cliente,
+    COUNT(tk.id_ticket) AS Total_Tickets
+FROM dbo.Ticket tk
+JOIN dbo.Trabajo tr ON tk.id_trabajo = tr.id_trabajo
+JOIN dbo.Cliente c ON tr.id_cliente = c.id_cliente
 GROUP BY c.nombre
 ORDER BY Total_Tickets DESC;
 
--- 4️⃣ Tipos de problema más comunes
-SELECT 
-    tp.descripcion AS Tipo_Problema,
-    COUNT(t.id_ticket) AS Total_Incidencias
-FROM dbo.Ticket t
-INNER JOIN dbo.TipoProblema tp ON t.id_tipo_problema = tp.id_tipo_problema
-GROUP BY tp.descripcion
-ORDER BY Total_Incidencias DESC;
 
--- 5️⃣ Porcentaje de tickets cerrados frente al total
+-- 6️⃣ Tickets que cambiaron más veces de estado (usa COUNT + HistorialTicket)
 SELECT 
-    (COUNT(CASE WHEN estado = 'Cerrado' THEN 1 END) * 100.0 / COUNT(*)) AS Porcentaje_Cerrados
-FROM dbo.Ticket;
+    tk.id_ticket,
+    COUNT(h.id_historial) AS Total_Cambios_Estado
+FROM dbo.HistorialTicket h
+JOIN dbo.Ticket tk ON h.id_ticket = tk.id_ticket
+GROUP BY tk.id_ticket
+HAVING COUNT(h.id_historial) > 3
+ORDER BY Total_Cambios_Estado DESC;
 
--- 6️⃣ Equipos más reportados en tickets
-SELECT 
-    e.nombre_equipo,
-    COUNT(dt.id_detalle) AS Total_Reportes
-FROM dbo.DetalleTrabajo dt
-INNER JOIN dbo.Equipoinstalado e ON dt.id_equipo = e.id_equipo
-GROUP BY e.nombre_equipo
-ORDER BY Total_Reportes DESC;
 
--- 7️⃣ Técnicos que atienden más de 5 tickets abiertos actualmente
+-- 7️⃣ Tiempo promedio entre creación y validación de tickets (usa subconsulta + AVG)
 SELECT 
-    u.nombre AS Tecnico,
-    COUNT(t.id_ticket) AS Tickets_Abiertos
-FROM dbo.Ticket t
-INNER JOIN dbo.Trabajo tr ON t.id_trabajo = tr.id_trabajo
-INNER JOIN dbo.UsuarioSistema u ON tr.id_tecnico = u.id_usuario
-WHERE t.estado = 'Abierto'
-GROUP BY u.nombre
-HAVING COUNT(t.id_ticket) > 5;
+    AVG(DATEDIFF(DAY, tk.fecha_creado, v.fecha_validacion)) AS Promedio_Dias_Validacion
+FROM dbo.Ticket tk
+JOIN dbo.Validacion v ON tk.id_ticket = v.id_ticket;
 
--- 8️⃣ Tiempo promedio de resolución por tipo de problema
-SELECT 
-    tp.descripcion AS Tipo_Problema,
-    AVG(DATEDIFF(HOUR, t.fecha_creacion, t.fecha_cierre)) AS Promedio_Horas
-FROM dbo.Ticket t
-INNER JOIN dbo.TipoProblema tp ON t.id_tipo_problema = tp.id_tipo_problema
-WHERE t.estado = 'Cerrado'
-GROUP BY tp.descripcion
-ORDER BY Promedio_Horas ASC;
 
--- 9️⃣ Días con más creación de tickets
+-- 8️⃣ Catálogos más usados en tickets (usa GROUP BY + COUNT)
 SELECT 
-    CONVERT(DATE, t.fecha_creacion) AS Fecha,
-    COUNT(*) AS Total_Tickets
-FROM dbo.Ticket t
-GROUP BY CONVERT(DATE, t.fecha_creacion)
-ORDER BY Total_Tickets DESC;
+    c.nombre AS Catalogo,
+    COUNT(tk.id_ticket) AS Veces_Usado
+FROM dbo.Ticket tk
+JOIN dbo.Catalogo c ON tk.id_catalogo = c.id_catalogo
+GROUP BY c.nombre
+ORDER BY Veces_Usado DESC;
 
--- 🔟 Técnicos con mejor rendimiento (cerrados / asignados)
+-- 9️⃣ Técnicos que más validaciones exitosas tienen (usa subconsulta y ORDER BY)
 SELECT 
-    u.nombre AS Tecnico,
-    COUNT(CASE WHEN t.estado = 'Cerrado' THEN 1 END) * 100.0 / COUNT(*) AS Eficiencia_Porcentaje
-FROM dbo.Ticket t
-INNER JOIN dbo.Trabajo tr ON t.id_trabajo = tr.id_trabajo
-INNER JOIN dbo.UsuarioSistema u ON tr.id_tecnico = u.id_usuario
-GROUP BY u.nombre
-ORDER BY Eficiencia_Porcentaje DESC;
+    u.nombre AS Supervisor,
+    (SELECT COUNT(*) 
+     FROM dbo.Validacion v 
+     WHERE v.id_supervisor = u.id_usuario AND v.resultado = 1) AS Validaciones_Exitosas
+FROM dbo.UsuarioSistema u
+WHERE u.rol = 'supervisor'
+ORDER BY Validaciones_Exitosas DESC;
+
+
+-- 🔟 Ranking de técnicos por eficiencia (usa CTE y función de ventana)
+WITH Eficiencia AS (
+    SELECT 
+        u.id_usuario,
+        u.nombre AS Tecnico,
+        COUNT(t.id_trabajo) AS Total_Trabajos,
+        AVG(DATEDIFF(DAY, t.fecha_creacion, GETDATE())) AS Promedio_Dias
+    FROM dbo.Trabajo t
+    JOIN dbo.UsuarioSistema u ON t.id_tecnico = u.id_usuario
+    WHERE u.rol = 'tecnico'
+    GROUP BY u.id_usuario, u.nombre
+)
+SELECT 
+    Tecnico,
+    Total_Trabajos,
+    Promedio_Dias,
+    RANK() OVER (ORDER BY Total_Trabajos DESC, Promedio_Dias ASC) AS Ranking_Eficiencia
+FROM Eficiencia;

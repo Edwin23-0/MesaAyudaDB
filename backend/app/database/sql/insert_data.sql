@@ -1,0 +1,25 @@
+-- Actualización de descripciones realistas para la tabla Catalogo
+UPDATE Catalogo SET descripcion = 'Interferencia detectada en el enlace de radiofrecuencia entre las torres principales.' WHERE id_catalogo = 1;
+UPDATE Catalogo SET descripcion = 'El equipo GigaOne presenta pérdida de señal intermitente debido a alineación incorrecta.' WHERE id_catalogo = 2;
+UPDATE Catalogo SET descripcion = 'Cliente reporta baja velocidad en enlace punto a punto durante horas pico.' WHERE id_catalogo = 3;
+UPDATE Catalogo SET descripcion = 'Se requiere reconfiguración del canal RF para evitar solapamiento con otros enlaces.' WHERE id_catalogo = 4;
+UPDATE Catalogo SET descripcion = 'El enlace no establece conexión tras reinicio del equipo remoto.' WHERE id_catalogo = 5;
+UPDATE Catalogo SET descripcion = 'Antena desalineada por condiciones climáticas extremas.' WHERE id_catalogo = 6;
+UPDATE Catalogo SET descripcion = 'Fallo en el PoE que alimenta el radio principal del sitio remoto.' WHERE id_catalogo = 7;
+UPDATE Catalogo SET descripcion = 'Degradación del throughput detectada por ruido elevado en la banda de 5 GHz.' WHERE id_catalogo = 8;
+UPDATE Catalogo SET descripcion = 'Configuración IP duplicada entre radios conectados a la misma subred.' WHERE id_catalogo = 9;
+UPDATE Catalogo SET descripcion = 'Cliente solicita ampliación del ancho de canal a 80 MHz para mejorar capacidad.' WHERE id_catalogo = 10;
+UPDATE Catalogo SET descripcion = 'Error en la autenticación del radio esclavo dentro del enlace GigaOne.' WHERE id_catalogo = 11;
+UPDATE Catalogo SET descripcion = 'El firmware del radio está desactualizado y presenta incompatibilidad con el maestro.' WHERE id_catalogo = 12;
+UPDATE Catalogo SET descripcion = 'El enlace punto a punto presenta pérdida de paquetes a intervalos regulares.' WHERE id_catalogo = 13;
+UPDATE Catalogo SET descripcion = 'Se requiere revisión del alineamiento óptico y nivel RSSI.' WHERE id_catalogo = 14;
+UPDATE Catalogo SET descripcion = 'Corte de energía en el nodo base provoca caída total del servicio.' WHERE id_catalogo = 15;
+UPDATE Catalogo SET descripcion = 'Antena reemplazada por daño físico en el conector SMA.' WHERE id_catalogo = 16;
+UPDATE Catalogo SET descripcion = 'Reporte de fluctuación en el SNR que afecta la estabilidad del enlace.' WHERE id_catalogo = 17;
+UPDATE Catalogo SET descripcion = 'Error en la tabla ARP impide el acceso remoto al radio principal.' WHERE id_catalogo = 18;
+UPDATE Catalogo SET descripcion = 'Cambio de frecuencia solicitado por interferencia con otro proveedor cercano.' WHERE id_catalogo = 19;
+UPDATE Catalogo SET descripcion = 'Enlace punto a punto requiere migración de protocolo de comunicación.' WHERE id_catalogo = 20;
+UPDATE Catalogo SET descripcion = 'Cliente solicita revisión del desempeño del backhaul principal GigaOne.' WHERE id_catalogo = 21;
+UPDATE Catalogo SET descripcion = 'Alerta por pérdida de sincronización entre radios maestro y esclavo.' WHERE id_catalogo = 22;
+UPDATE Catalogo SET descripcion = 'Se detecta potencia de transmisión fuera del rango permitido por la normativa.' WHERE id_catalogo = 23;
+UPDATE Catalogo SET descripcion = 'Solicitud de mantenimiento preventivo a equipos de radiofrecuencia del sitio norte.' WHERE id_catalogo = 24;
