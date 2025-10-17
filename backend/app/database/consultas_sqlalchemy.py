@@ -1,147 +1,224 @@
 # backend/app/database/consultas_sqlalchemy.py
+# -------------------------------------------------------------
+#  Consultas analíticas del proyecto Mesa de Ayuda (versión estable)
+#  Traducción fiel de las 10 consultas SQL originales
+#  Compatible con SQL Server (pyodbc + SQLAlchemy)
+# -------------------------------------------------------------
 
-from sqlalchemy import func, desc
+from sqlalchemy import func, desc, distinct, case, over, text
 from sqlalchemy.orm import Session
 from app.database.connection import engine
 from app.models.models import (
-    Cliente, UsuarioSistema, TipoServicio, ServicioCliente,
-    TipoProblema, Trabajo, DetalleTrabajo, EquipoInstalado,
-    Catalogo, Ticket, Validacion, HistorialTicket
+    Cliente, UsuarioSistema, Trabajo, ServicioCliente,
+    Validacion, Ticket, Catalogo, HistorialTicket
 )
 import pandas as pd
 import matplotlib.pyplot as plt
 
+# =====================================================
+# Función auxiliar definitiva para DATEDIFF SQL Server
+# =====================================================
+def datediff_days(col1, col2):
+    """Usa DATEDIFF(day, col1, col2) sin parámetros en SQL Server"""
+    return func.datediff(text("day"), col1, col2)
+
+# =====================================================
+# Helper para mostrar y graficar sin errores
+# =====================================================
+def mostrar_y_graficar(df, titulo, tipo="bar", x=None, y=None):
+    print(f"\n{titulo}:\n", df)
+    if not df.empty and y in df.columns:
+        df.plot(kind=tipo, x=x, y=y, title=titulo)
+        plt.show()
+    else:
+        print(f"⚠️ No hay datos para mostrar en '{titulo}' (DataFrame vacío o sin columnas numéricas)\n")
+
 # Crear sesión
 session = Session(bind=engine)
+print("\n===================== CONSULTAS ANALÍTICAS =====================\n")
 
-# ========================================
-# CONSULTA 1: Total de trabajos por estado
-# ========================================
+# =====================================================
+# 1️⃣ Promedio de días por técnico
+# =====================================================
 q1 = (
-    session.query(Trabajo.estado, func.count(Trabajo.id_trabajo).label("Cantidad"))
-    .group_by(Trabajo.estado)
-    .order_by(desc("Cantidad"))
-)
-df1 = pd.read_sql(q1.statement, session.bind)
-print("\n1️⃣ Total de trabajos por estado:\n", df1)
-df1.plot(kind="bar", x="estado", y="Cantidad", legend=False, title="Trabajos por estado")
-plt.show()
-
-# ========================================
-# CONSULTA 2: Técnicos con más trabajos realizados
-# ========================================
-q2 = (
-    session.query(UsuarioSistema.nombre.label("Técnico"), func.count(Trabajo.id_trabajo).label("Total_Trabajos"))
+    session.query(
+        UsuarioSistema.nombre.label("Tecnico"),
+        func.count(Trabajo.id_trabajo).label("Total_Trabajos"),
+        func.avg(datediff_days(Trabajo.fecha_creacion, func.getdate())).label("Promedio_Dias_Trabajo")
+    )
     .join(Trabajo, UsuarioSistema.id_usuario == Trabajo.id_tecnico)
     .filter(UsuarioSistema.rol == "tecnico")
     .group_by(UsuarioSistema.nombre)
+    .order_by("Promedio_Dias_Trabajo")
+)
+df1 = pd.read_sql(q1.statement, session.bind)
+mostrar_y_graficar(df1, "1️⃣ Promedio de días por técnico", tipo="bar", x="Tecnico", y="Promedio_Dias_Trabajo")
+
+# =====================================================
+# 2️⃣ Técnicos con más de 5 trabajos asignados
+# =====================================================
+q2 = (
+    session.query(
+        UsuarioSistema.nombre.label("Tecnico"),
+        func.count(Trabajo.id_trabajo).label("Total_Trabajos")
+    )
+    .join(Trabajo, UsuarioSistema.id_usuario == Trabajo.id_tecnico)
+    .filter(UsuarioSistema.rol == "tecnico")
+    .group_by(UsuarioSistema.nombre)
+    .having(func.count(Trabajo.id_trabajo) > 5)
     .order_by(desc("Total_Trabajos"))
 )
 df2 = pd.read_sql(q2.statement, session.bind)
-print("\n2️⃣ Técnicos con más trabajos realizados:\n", df2)
-df2.plot(kind="barh", x="Técnico", y="Total_Trabajos", legend=False, title="Técnicos con más trabajos")
-plt.show()
+mostrar_y_graficar(df2, "2️⃣ Técnicos con más de 5 trabajos asignados", tipo="barh", x="Tecnico", y="Total_Trabajos")
 
-# ========================================
-# CONSULTA 3: Promedio de validaciones por supervisor
-# ========================================
+# =====================================================
+# 3️⃣ Clientes con más de un tipo de servicio activo
+# =====================================================
 q3 = (
-    session.query(UsuarioSistema.nombre.label("Supervisor"), func.count(Validacion.id_validacion).label("Validaciones"))
+    session.query(
+        Cliente.nombre.label("Cliente"),
+        func.count(distinct(ServicioCliente.id_tipo)).label("Tipos_Servicio_Activos")
+    )
+    .join(ServicioCliente, Cliente.id_cliente == ServicioCliente.id_cliente)
+    .filter(ServicioCliente.estado == "activo")
+    .group_by(Cliente.nombre)
+    .having(func.count(distinct(ServicioCliente.id_tipo)) > 1)
+)
+df3 = pd.read_sql(q3.statement, session.bind)
+mostrar_y_graficar(df3, "3️⃣ Clientes con más de un tipo de servicio activo", x="Cliente", y="Tipos_Servicio_Activos")
+
+# =====================================================
+# 4️⃣ Promedio de validaciones por supervisor
+# =====================================================
+q4 = (
+    session.query(
+        UsuarioSistema.nombre.label("Supervisor"),
+        func.count(Validacion.id_validacion).label("Total_Validaciones"),
+        (func.avg(case((Validacion.resultado == 1, 1), else_=0)) * 100).label("Porcentaje_Aprobadas")
+    )
     .join(Validacion, UsuarioSistema.id_usuario == Validacion.id_supervisor)
     .filter(UsuarioSistema.rol == "supervisor")
     .group_by(UsuarioSistema.nombre)
-)
-df3 = pd.read_sql(q3.statement, session.bind)
-print("\n3️⃣ Promedio de validaciones por supervisor:\n", df3)
-df3.plot(kind="bar", x="Supervisor", y="Validaciones", title="Validaciones por supervisor")
-plt.show()
-
-# ========================================
-# CONSULTA 4: Tickets por prioridad
-# ========================================
-q4 = (
-    session.query(Ticket.prioridad, func.count(Ticket.id_ticket).label("Cantidad"))
-    .group_by(Ticket.prioridad)
+    .order_by(desc("Porcentaje_Aprobadas"))
 )
 df4 = pd.read_sql(q4.statement, session.bind)
-print("\n4️⃣ Tickets por prioridad:\n", df4)
-df4.plot(kind="pie", y="Cantidad", labels=df4["prioridad"], autopct="%1.1f%%", title="Distribución de tickets por prioridad")
-plt.ylabel("")
-plt.show()
+mostrar_y_graficar(df4, "4️⃣ Promedio de validaciones por supervisor", x="Supervisor", y="Porcentaje_Aprobadas")
 
-# ========================================
-# CONSULTA 5: Tipos de problema más comunes
-# ========================================
+# =====================================================
+# 5️⃣ Top 5 clientes con más tickets creados
+# =====================================================
 q5 = (
-    session.query(TipoProblema.nombre.label("Tipo_Problema"), func.count(Trabajo.id_trabajo).label("Frecuencia"))
-    .join(Trabajo, TipoProblema.id_tipo == Trabajo.id_tipo)
-    .group_by(TipoProblema.nombre)
-    .order_by(desc("Frecuencia"))
+    session.query(
+        Cliente.nombre.label("Cliente"),
+        func.count(Ticket.id_ticket).label("Total_Tickets")
+    )
+    .join(Trabajo, Ticket.id_trabajo == Trabajo.id_trabajo)
+    .join(Cliente, Trabajo.id_cliente == Cliente.id_cliente)
+    .group_by(Cliente.nombre)
+    .order_by(desc("Total_Tickets"))
+    .limit(5)
 )
 df5 = pd.read_sql(q5.statement, session.bind)
-print("\n5️⃣ Tipos de problema más comunes:\n", df5)
-df5.plot(kind="bar", x="Tipo_Problema", y="Frecuencia", title="Tipos de problema más comunes")
-plt.show()
+mostrar_y_graficar(df5, "5️⃣ Top 5 clientes con más tickets creados", tipo="barh", x="Cliente", y="Total_Tickets")
 
-# ========================================
-# CONSULTA 6: Clientes con más servicios activos
-# ========================================
+# =====================================================
+# 6️⃣ Tickets con más de 3 cambios de estado
+# =====================================================
 q6 = (
-    session.query(Cliente.nombre.label("Cliente"), func.count(ServicioCliente.id_servicio).label("Servicios_Activos"))
-    .join(ServicioCliente, Cliente.id_cliente == ServicioCliente.id_cliente)
-    .filter(ServicioCliente.estado == "Activo")
-    .group_by(Cliente.nombre)
-    .order_by(desc("Servicios_Activos"))
+    session.query(
+        Ticket.id_ticket,
+        func.count(HistorialTicket.id_historial).label("Total_Cambios_Estado")
+    )
+    .join(HistorialTicket, Ticket.id_ticket == HistorialTicket.id_ticket)
+    .group_by(Ticket.id_ticket)
+    .having(func.count(HistorialTicket.id_historial) > 3)
+    .order_by(desc("Total_Cambios_Estado"))
 )
 df6 = pd.read_sql(q6.statement, session.bind)
-print("\n6️⃣ Clientes con más servicios activos:\n", df6)
-df6.plot(kind="barh", x="Cliente", y="Servicios_Activos", title="Clientes con más servicios activos")
-plt.show()
+mostrar_y_graficar(df6, "6️⃣ Tickets con más de 3 cambios de estado", x="id_ticket", y="Total_Cambios_Estado")
 
-# ========================================
-# CONSULTA 7: Promedio de trabajos por técnico
-# ========================================
+# =====================================================
+# 7️⃣ Tiempo promedio entre creación y validación de tickets
+# =====================================================
 q7 = (
-    session.query(func.avg(func.count(Trabajo.id_trabajo)))
-    .join(UsuarioSistema, UsuarioSistema.id_usuario == Trabajo.id_tecnico)
-    .group_by(UsuarioSistema.id_usuario)
+    session.query(
+        func.avg(datediff_days(Ticket.fecha_creado, Validacion.fecha_validacion)).label("Promedio_Dias_Validacion")
+    )
+    .join(Validacion, Ticket.id_ticket == Validacion.id_ticket)
 )
-promedio_trabajos = session.execute(q7.statement).scalar()
-print(f"\n7️⃣ Promedio de trabajos por técnico: {promedio_trabajos:.2f}")
+df7 = pd.read_sql(q7.statement, session.bind)
+print("\n7️⃣ Promedio de días entre creación y validación:\n", df7)
 
-# ========================================
-# CONSULTA 8: Estados más frecuentes en historial de tickets
-# ========================================
+# =====================================================
+# 8️⃣ Catálogos más usados en tickets
+# =====================================================
 q8 = (
-    session.query(HistorialTicket.estado_nuevo, func.count(HistorialTicket.id_historial).label("Frecuencia"))
-    .group_by(HistorialTicket.estado_nuevo)
-    .order_by(desc("Frecuencia"))
+    session.query(
+        Catalogo.nombre.label("Catalogo"),
+        func.count(Ticket.id_ticket).label("Veces_Usado")
+    )
+    .join(Catalogo, Ticket.id_catalogo == Catalogo.id_catalogo)
+    .group_by(Catalogo.nombre)
+    .order_by(desc("Veces_Usado"))
 )
 df8 = pd.read_sql(q8.statement, session.bind)
-print("\n8️⃣ Estados más frecuentes en historial de tickets:\n", df8)
-df8.plot(kind="bar", x="estado_nuevo", y="Frecuencia", title="Estados más frecuentes en historial")
-plt.show()
+mostrar_y_graficar(df8, "8️⃣ Catálogos más usados en tickets", x="Catalogo", y="Veces_Usado")
 
-# ========================================
-# CONSULTA 9: Equipos instalados por modelo
-# ========================================
+# =====================================================
+# 9️⃣ Supervisores con más validaciones exitosas
+# =====================================================
+sub_validaciones = (
+    session.query(
+        Validacion.id_supervisor,
+        func.count(Validacion.id_validacion).label("Validaciones_Exitosas")
+    )
+    .filter(Validacion.resultado == 1)
+    .group_by(Validacion.id_supervisor)
+    .subquery()
+)
+
 q9 = (
-    session.query(EquipoInstalado.modelo, func.count(EquipoInstalado.id_equipo).label("Cantidad"))
-    .group_by(EquipoInstalado.modelo)
+    session.query(
+        UsuarioSistema.nombre.label("Supervisor"),
+        func.coalesce(sub_validaciones.c.Validaciones_Exitosas, 0).label("Validaciones_Exitosas")
+    )
+    .outerjoin(sub_validaciones, UsuarioSistema.id_usuario == sub_validaciones.c.id_supervisor)
+    .filter(UsuarioSistema.rol == "supervisor")
+    .order_by(desc("Validaciones_Exitosas"))
 )
 df9 = pd.read_sql(q9.statement, session.bind)
-print("\n9️⃣ Equipos instalados por modelo:\n", df9)
-df9.plot(kind="bar", x="modelo", y="Cantidad", title="Equipos instalados por modelo")
-plt.show()
+mostrar_y_graficar(df9, "9️⃣ Supervisores con más validaciones exitosas", tipo="barh", x="Supervisor", y="Validaciones_Exitosas")
 
-# ========================================
-# CONSULTA 10: Porcentaje de tickets validados exitosamente
-# ========================================
-total_validaciones = session.query(func.count(Validacion.id_validacion)).scalar()
-exitosas = session.query(func.count(Validacion.id_validacion)).filter(Validacion.resultado == True).scalar()
-porcentaje = (exitosas / total_validaciones * 100) if total_validaciones > 0 else 0
-print(f"\n🔟 Porcentaje de validaciones exitosas: {porcentaje:.2f}%")
+# =====================================================
+# 🔟 Ranking de técnicos por eficiencia (CTE + RANK)
+# =====================================================
+cte = (
+    session.query(
+        UsuarioSistema.id_usuario.label("id_usuario"),
+        UsuarioSistema.nombre.label("Tecnico"),
+        func.count(Trabajo.id_trabajo).label("Total_Trabajos"),
+        func.avg(datediff_days(Trabajo.fecha_creacion, func.getdate())).label("Promedio_Dias")
+    )
+    .join(Trabajo, UsuarioSistema.id_usuario == Trabajo.id_tecnico)
+    .filter(UsuarioSistema.rol == "tecnico")
+    .group_by(UsuarioSistema.id_usuario, UsuarioSistema.nombre)
+    .cte("Eficiencia")
+)
+
+q10 = (
+    session.query(
+        cte.c.Tecnico,
+        cte.c.Total_Trabajos,
+        cte.c.Promedio_Dias,
+        over(
+            func.rank(),
+            order_by=(desc(cte.c.Total_Trabajos), cte.c.Promedio_Dias)
+        ).label("Ranking_Eficiencia")
+    )
+)
+df10 = pd.read_sql(q10.statement, session.bind)
+mostrar_y_graficar(df10, "🔟 Ranking de técnicos por eficiencia", x="Tecnico", y="Ranking_Eficiencia")
 
 # Cerrar sesión
 session.close()
-print("\n✅ Todas las consultas se ejecutaron correctamente.")
+print("\n✅ Todas las consultas analíticas se ejecutaron correctamente.\n")
